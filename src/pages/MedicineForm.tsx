@@ -131,7 +131,7 @@ const MedicineForm: React.FC = () => {
       if (isEditing && id) {
         await updateMedicine(id, formData);
       } else {
-        await addMedicine(formData);
+        await addMedicine(formData, user!.id);
       }
 
       navigate('/medicines');

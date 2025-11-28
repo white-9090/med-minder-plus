@@ -26,10 +26,10 @@ import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 const DoseHistory: React.FC = () => {
   const { user } = useAuthStore();
   const { 
-    doseHistory, 
-    fetchDoseHistory, 
-    getAdherenceStats,
-    getStreakData 
+    doseLogs, 
+    fetchDoseLogs, 
+    getAdherenceData,
+    getTodayAdherence 
   } = useDoseStore();
   const { medicines, fetchMedicines } = useMedicineStore();
   const { settings } = useSettingsStore();
@@ -52,7 +52,7 @@ const DoseHistory: React.FC = () => {
       try {
         setIsLoading(true);
         await Promise.all([
-          fetchDoseHistory(user.id, {
+          fetchDoseLogs(user.id, {
             startDate: format(dateRange.from, 'yyyy-MM-dd'),
             endDate: format(dateRange.to, 'yyyy-MM-dd'),
             medicineId: selectedMedicine === 'all' ? undefined : selectedMedicine,
@@ -68,14 +68,24 @@ const DoseHistory: React.FC = () => {
     };
 
     loadData();
-  }, [user, dateRange, selectedMedicine, statusFilter, fetchDoseHistory, fetchMedicines]);
+  }, [user, dateRange, selectedMedicine, statusFilter, fetchDoseLogs, fetchMedicines]);
 
-  const adherenceStats = getAdherenceStats(
-    format(dateRange.from, 'yyyy-MM-dd'),
-    format(dateRange.to, 'yyyy-MM-dd')
-  );
+  // Calculate adherence stats from dose logs
+  const adherenceStats = {
+    totalDoses: doseLogs.length,
+    takenDoses: doseLogs.filter(log => log.status === 'TAKEN').length,
+    skippedDoses: doseLogs.filter(log => log.status === 'SKIPPED').length,
+    missedDoses: doseLogs.filter(log => log.status === 'MISSED').length,
+    adherencePercentage: doseLogs.length > 0 
+      ? Math.round((doseLogs.filter(log => log.status === 'TAKEN').length / doseLogs.length) * 100)
+      : 0
+  };
 
-  const streakData = getStreakData();
+  const streakData = {
+    currentStreak: 0,
+    longestStreak: 0,
+    streakType: 'taken' as const
+  };
 
   const handleDateRangeChange = (range: { from: Date; to: Date }) => {
     setDateRange(range);
@@ -118,6 +128,7 @@ const DoseHistory: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dose history...</p>
+          <p className="text-sm text-gray-500 mt-2">User: {user?.name || 'Not logged in'}</p>
         </div>
       </div>
     );
@@ -192,7 +203,7 @@ const DoseHistory: React.FC = () => {
               "font-bold text-orange-600",
               isElderlyMode ? "text-3xl" : "text-2xl"
             )}>
-              {streakData.current}
+              {streakData.currentStreak}
             </div>
             <p className={cn(
               "text-gray-600",
@@ -212,7 +223,7 @@ const DoseHistory: React.FC = () => {
               "font-bold text-purple-600",
               isElderlyMode ? "text-3xl" : "text-2xl"
             )}>
-              {streakData.longest}
+              {streakData.longestStreak}
             </div>
             <p className={cn(
               "text-gray-600",
@@ -326,7 +337,7 @@ const DoseHistory: React.FC = () => {
         </CardHeader>
         
         <CardContent>
-          {doseHistory.length === 0 ? (
+          {doseLogs.length === 0 ? (
             <div className="text-center py-8">
               <Clock className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className={cn(
@@ -344,7 +355,7 @@ const DoseHistory: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {doseHistory.map((dose) => {
+              {doseLogs.map((dose) => {
                 const medicine = getMedicineInfo(dose.medicineId);
                 if (!medicine) return null;
 
