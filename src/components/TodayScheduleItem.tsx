@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Textarea } from './ui/textarea';
-import { Check, Clock, SkipForward, Snooze, AlertCircle } from 'lucide-react';
+import { Check, Clock, SkipForward, Timer, AlertCircle } from 'lucide-react';
 import { TodayScheduleItem as TodayScheduleItemType, DoseStatus } from '../types';
 import PillTag from './PillTag';
+import VoiceReminder from './VoiceReminder';
+import { voiceService } from '../services/voiceService';
+import { useSettingsStore } from '../stores/settingsStore';
 import { cn } from '../lib/utils';
 import { format, isPast, parseISO } from 'date-fns';
 
@@ -27,13 +30,22 @@ const TodayScheduleItem: React.FC<TodayScheduleItemProps> = ({
   onSnooze,
   className,
 }) => {
+  const { settings } = useSettingsStore();
   const [notes, setNotes] = useState('');
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'taken' | 'skipped'>('taken');
+  const [showVoiceReminder, setShowVoiceReminder] = useState(false);
 
   const scheduledTime = parseISO(item.scheduledTime);
   const isOverdue = isPast(scheduledTime) && item.status === 'PENDING';
   const isPending = item.status === 'PENDING';
+
+  // Show voice reminder for overdue doses if voice reminders are enabled
+  useEffect(() => {
+    if (settings?.voiceReminders && isOverdue && !showVoiceReminder) {
+      setShowVoiceReminder(true);
+    }
+  }, [settings?.voiceReminders, isOverdue, showVoiceReminder]);
   const isTaken = item.status === 'TAKEN';
   const isSkipped = item.status === 'SKIPPED';
   const isMissed = item.status === 'MISSED';
@@ -72,15 +84,24 @@ const TodayScheduleItem: React.FC<TodayScheduleItemProps> = ({
     setIsNotesDialogOpen(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (actionType === 'taken' && onMarkAsTaken) {
       onMarkAsTaken(item.id, notes || undefined);
+      // Play confirmation voice message
+      if (settings?.voiceReminders) {
+        await voiceService.speakDoseConfirmation(item.medicineName, 'taken');
+      }
     } else if (actionType === 'skipped' && onMarkAsSkipped) {
       onMarkAsSkipped(item.id, notes || undefined);
+      // Play confirmation voice message
+      if (settings?.voiceReminders) {
+        await voiceService.speakDoseConfirmation(item.medicineName, 'skipped');
+      }
     }
     
     setNotes('');
     setIsNotesDialogOpen(false);
+    setShowVoiceReminder(false);
   };
 
   const handleQuickAction = (type: 'taken' | 'skipped') => {
@@ -239,7 +260,7 @@ const TodayScheduleItem: React.FC<TodayScheduleItemProps> = ({
                   size={isElderlyMode ? "default" : "sm"}
                   onClick={() => handleSnooze(10)}
                 >
-                  <Snooze className={cn(
+                  <Timer className={cn(
                     "mr-1",
                     isElderlyMode ? "h-5 w-5" : "h-4 w-4"
                   )} />
@@ -267,6 +288,19 @@ const TodayScheduleItem: React.FC<TodayScheduleItemProps> = ({
             isElderlyMode ? "text-base" : "text-sm"
           )}>
             "{item.medicineNickname}"
+          </div>
+        )}
+
+        {/* Voice Reminder */}
+        {showVoiceReminder && settings?.voiceReminders && (
+          <div className="mt-3">
+            <VoiceReminder
+              medicineName={item.medicineName}
+              dosage={`${item.dosageAmount} ${item.dosageUnit}`}
+              scheduledTime={format(scheduledTime, 'h:mm a')}
+              isElderlyMode={isElderlyMode}
+              onDismiss={() => setShowVoiceReminder(false)}
+            />
           </div>
         )}
       </CardContent>

@@ -13,6 +13,14 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import MedicineList from "./pages/MedicineList";
+import MedicineForm from "./pages/MedicineForm";
+import ScheduleView from "./pages/ScheduleView";
+import DoseHistory from "./pages/DoseHistory";
+import PrescriptionUpload from "./pages/PrescriptionUpload";
+import NotificationCenter from "./pages/NotificationCenter";
+import Settings from "./pages/Settings";
+import CaregiverDashboard from "./pages/CaregiverDashboard";
 import NotFound from "./pages/NotFound";
 
 // Layout
@@ -51,26 +59,25 @@ const App = () => {
             {/* Protected Routes */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="dashboard" element={<Dashboard />} />
+              
               {/* Medicine Management Routes */}
-              {/* <Route path="medicines" element={<MedicineList />} />
+              <Route path="medicines" element={<MedicineList />} />
               <Route path="medicines/new" element={<MedicineForm />} />
               <Route path="medicines/:id/edit" element={<MedicineForm />} />
-              <Route path="schedule" element={<ScheduleView />} />
+              <Route path="medicines/:medicineId/schedule" element={<ScheduleView />} />
               
-              Prescription Routes
-              <Route path="prescriptions" element={<PrescriptionList />} />
+              {/* Prescription Routes */}
               <Route path="prescriptions/upload" element={<PrescriptionUpload />} />
               
-              History and Analytics
+              {/* History and Analytics */}
               <Route path="history" element={<DoseHistory />} />
               
-              Caregiver Routes
+              {/* Caregiver Routes */}
               <Route path="caregiver" element={<CaregiverDashboard />} />
-              <Route path="alerts" element={<AlertsPage />} />
               
-              Settings and Notifications
+              {/* Settings and Notifications */}
               <Route path="settings" element={<Settings />} />
-              <Route path="notifications" element={<NotificationCenter />} /> */}
+              <Route path="notifications" element={<NotificationCenter />} />
             </Route>
             
             {/* Catch-all route */}
